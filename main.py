@@ -13,11 +13,10 @@ def xlsx_to_csv(wk_path, ws_name="Sheet1"):
     csv_filename = tmp_dir + "/" + wk_name.split('.')[0] + '.csv'
     wb = xlrd.open_workbook(wk_path)
     ws = wb.sheet_by_index(0)
-    csv_file = open(csv_filename, 'w')
-    wr = csv.writer(csv_file)
-    for rownum in range(ws.nrows):
-        wr.writerow(ws.row_values(rownum))
-    csv_file.close()
+    with open(csv_filename, 'w') as csv_file:
+        wr = csv.writer(csv_file)
+        for rownum in range(ws.nrows):
+            wr.writerow(ws.row_values(rownum))
     return csv_filename
 
 
@@ -59,17 +58,15 @@ def write_hash(file_path, hash):
 
 def get_worksheet_data(file_hash_save_path, current_hash, wk_source_path, file_source_name):
     saved_hash = get_saved_hash(file_hash_save_path)
-    if saved_hash:
-        if current_hash != saved_hash:
+    if not saved_hash:
+        return generate_csv(wk_source_path)
+    if current_hash == saved_hash:
+        csv_path = tmp_dir + '/' + file_source_name + '.csv'
+        if not os.path.isfile(csv_path):
             csv_path = xlsx_to_csv(wk_source_path)
-        else:
-            csv_path = tmp_dir + '/' + file_source_name + '.csv'
-            if not os.path.isfile(csv_path):
-                csv_path = xlsx_to_csv(wk_source_path)
-        ws_source = list(csv.reader(open(csv_path)))
     else:
-        ws_source = generate_csv(wk_source_path)
-    return ws_source
+        csv_path = xlsx_to_csv(wk_source_path)
+    return list(csv.reader(open(csv_path)))
 
 
 def get_saved_hash_file(saved_hash_file_path):
@@ -99,8 +96,6 @@ def main():
 
     first_row_source = 2
     last_row_source = 6842
-    row_target = 5
-
     # l'index de la source commence à 0, celui du target à 1
     source_to_target_mapper = {
         0: 1,
@@ -111,10 +106,9 @@ def main():
         12: 5
     }
 
-    for line_source in range(first_row_source, last_row_source):
+    for row_target, line_source in enumerate(range(first_row_source, last_row_source), start=5):
         for key, value in source_to_target_mapper.items():
             ws_target[row_target][value].value = ws_source[line_source][key]
-        row_target = row_target + 1
     wb_target.save(wk_target_path)
 
 
